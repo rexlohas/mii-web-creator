@@ -161,6 +161,7 @@ async function run() {
     const dockerComposePath = path.join(projectPath, 'docker-compose.yml');
     const dockerComposeContent = `services:
   ${projectName}-nginx:
+    container_name: ${projectName}-nginx
     image: nginx:alpine
     ports:
       - "${appPort}:80"
@@ -173,6 +174,7 @@ async function run() {
       - mii-network
 
   ${projectName}-app:
+    container_name: ${projectName}-app
     build:
       context: .
       dockerfile: docker/php/Dockerfile
@@ -187,6 +189,7 @@ async function run() {
       - ${projectName}-mysql
 
   ${projectName}-mysql:
+    container_name: ${projectName}-mysql
     image: mysql:8.4
     ports:
       - "${dbPort}:3306"
@@ -199,6 +202,7 @@ async function run() {
       - mii-network
 
   ${projectName}-phpmyadmin:
+    container_name: ${projectName}-phpmyadmin
     image: phpmyadmin/phpmyadmin
     ports:
       - "${pmaPort}:80"
