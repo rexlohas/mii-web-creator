@@ -1,0 +1,19 @@
+<?php
+require __DIR__.'/vendor/autoload.php';
+$app = require_once __DIR__.'/bootstrap/app.php';
+$kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+$kernel->bootstrap();
+
+$user = \App\Models\User::firstOrCreate(
+    ['email' => '{{adminEmail}}'],
+    [
+        'name' => 'Admin',
+        'password' => \Illuminate\Support\Facades\Hash::make('{{adminPassword}}'),
+        'email_verified_at' => now(),
+    ]
+);
+
+try {
+    $role = \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'admin']);
+    $user->assignRole($role);
+} catch (\Exception $e) {}
