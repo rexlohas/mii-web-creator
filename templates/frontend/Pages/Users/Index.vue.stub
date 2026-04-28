@@ -1,0 +1,87 @@
+<script setup>
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import { Head, Link, useForm } from '@inertiajs/vue3';
+import PrimaryButton from '@/Components/PrimaryButton.vue';
+
+defineProps({
+    users: Object,
+});
+
+const form = useForm({});
+
+const deleteUser = (id) => {
+    if (confirm('Are you sure you want to delete this user?')) {
+        form.delete(route('users.destroy', id));
+    }
+};
+</script>
+
+<template>
+    <Head title="Users" />
+
+    <AuthenticatedLayout>
+        <template #header>
+            <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">帳號管理</h2>
+        </template>
+
+        <div class="py-12">
+            <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+                <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
+                    <div class="p-6 text-gray-900 dark:text-gray-100">
+                        <div class="flex justify-between items-center mb-6">
+                            <h3 class="text-lg font-medium">使用者列表</h3>
+                            <Link :href="route('users.create')">
+                                <PrimaryButton>新增使用者</PrimaryButton>
+                            </Link>
+                        </div>
+
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm text-left text-gray-500 dark:text-gray-400">
+                                <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+                                    <tr>
+                                        <th scope="col" class="px-6 py-3">名稱</th>
+                                        <th scope="col" class="px-6 py-3">Email</th>
+                                        <th scope="col" class="px-6 py-3">角色</th>
+                                        <th scope="col" class="px-6 py-3">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr v-for="user in users.data" :key="user.id" class="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
+                                        <td class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">
+                                            {{ user.name }}
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            {{ user.email }}
+                                        </td>
+                                        <td class="px-6 py-4">
+                                            <span v-for="role in user.roles" :key="role.id" class="bg-blue-100 text-blue-800 text-xs font-medium mr-2 px-2.5 py-0.5 rounded dark:bg-blue-900 dark:text-blue-300">
+                                                {{ role.name }}
+                                            </span>
+                                        </td>
+                                        <td class="px-6 py-4 flex gap-2">
+                                            <Link :href="route('users.edit', user.id)" class="font-medium text-blue-600 dark:text-blue-500 hover:underline">編輯</Link>
+                                            <button @click="deleteUser(user.id)" class="font-medium text-red-600 dark:text-red-500 hover:underline">刪除</button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div class="mt-4 flex justify-between items-center" v-if="users.links && users.links.length > 3">
+                            <div class="text-sm text-gray-500 dark:text-gray-400">
+                                Showing {{ users.from }} to {{ users.to }} of {{ users.total }} results
+                            </div>
+                            <div class="flex gap-1">
+                                <template v-for="(link, key) in users.links" :key="key">
+                                    <Link v-if="link.url" :href="link.url" v-html="link.label" class="px-3 py-1 border rounded" :class="{'bg-gray-200 dark:bg-gray-700': link.active, 'text-gray-500': !link.url}"></Link>
+                                    <span v-else v-html="link.label" class="px-3 py-1 border rounded text-gray-500"></span>
+                                </template>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+    </AuthenticatedLayout>
+</template>

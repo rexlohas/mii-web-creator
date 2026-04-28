@@ -292,6 +292,44 @@ async function run() {
           fs.writeFileSync(userModelPath, userContent);
         }
       }
+
+      console.log('部署帳號管理功能 (Controllers, Pages, Routes)...');
+      const userControllerDest = path.join(projectPath, 'app', 'Http', 'Controllers', 'UserController.php');
+      fs.copyFileSync(path.join(rootDir, 'templates', 'backend', 'UserController.php.stub'), userControllerDest);
+
+      const pagesUsersDest = path.join(projectPath, 'resources', 'js', 'Pages', 'Users');
+      if (!fs.existsSync(pagesUsersDest)) fs.mkdirSync(pagesUsersDest, { recursive: true });
+      fs.copyFileSync(path.join(rootDir, 'templates', 'frontend', 'Pages', 'Users', 'Index.vue.stub'), path.join(pagesUsersDest, 'Index.vue'));
+      fs.copyFileSync(path.join(rootDir, 'templates', 'frontend', 'Pages', 'Users', 'Create.vue.stub'), path.join(pagesUsersDest, 'Create.vue'));
+      fs.copyFileSync(path.join(rootDir, 'templates', 'frontend', 'Pages', 'Users', 'Edit.vue.stub'), path.join(pagesUsersDest, 'Edit.vue'));
+
+      const routesPath = path.join(projectPath, 'routes', 'web.php');
+      if (fs.existsSync(routesPath)) {
+        let routesContent = fs.readFileSync(routesPath, 'utf8');
+        if (!routesContent.includes('UserController::class')) {
+          routesContent = routesContent.replace(/use Illuminate\\Support\\Facades\\Route;/, "use Illuminate\\Support\\Facades\\Route;\nuse App\\Http\\Controllers\\UserController;");
+          routesContent = routesContent.replace(/require __DIR__.'\/auth\.php';/, "Route::middleware('auth')->group(function () {\n    Route::resource('users', UserController::class);\n});\n\nrequire __DIR__.'/auth.php';");
+          fs.writeFileSync(routesPath, routesContent);
+        }
+      }
+
+      const layoutPath = path.join(projectPath, 'resources', 'js', 'Layouts', 'AuthenticatedLayout.vue');
+      if (fs.existsSync(layoutPath)) {
+        let layoutContent = fs.readFileSync(layoutPath, 'utf8');
+        if (!layoutContent.includes("route('users.index')")) {
+          // Add Desktop Navigation Link
+          layoutContent = layoutContent.replace(
+            /Dashboard\s*<\/NavLink>/,
+            `Dashboard\n                                </NavLink>\n                                <NavLink :href="route('users.index')" :active="route().current('users.*')">\n                                    帳號管理\n                                </NavLink>`
+          );
+          // Add Responsive Navigation Link
+          layoutContent = layoutContent.replace(
+            /Dashboard\s*<\/ResponsiveNavLink>/,
+            `Dashboard\n                        </ResponsiveNavLink>\n                        <ResponsiveNavLink :href="route('users.index')" :active="route().current('users.*')">\n                            帳號管理\n                        </ResponsiveNavLink>`
+          );
+          fs.writeFileSync(layoutPath, layoutContent);
+        }
+      }
     }
 
     if (startStep <= 6) {

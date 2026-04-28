@@ -14,6 +14,8 @@ $user = \App\Models\User::firstOrCreate(
 );
 
 try {
-    $role = \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'admin']);
-    $user->assignRole($role);
+    $adminRole = \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'admin']);
+    \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'editor']);
+    \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'viewer']);
+    $user->assignRole($adminRole);
 } catch (\Exception $e) {}
