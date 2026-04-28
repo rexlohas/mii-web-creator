@@ -260,6 +260,10 @@ async function run() {
     if (startStep <= 3) {
       saveState(3);
       console.log('\n[3/7] 啟動專案專屬的 Docker 環境...');
+      // 清除可能殘留的同名 Docker 容器與 Volume，避免資料庫密碼錯誤等問題
+      try {
+        execSync('docker compose down -v', { cwd: projectPath, stdio: 'ignore' });
+      } catch (e) {}
       execSync('docker compose up -d --build', { cwd: projectPath, stdio: 'inherit' });
     }
 
@@ -340,11 +344,17 @@ async function run() {
       if (!fs.existsSync(pagesSettingsDest)) fs.mkdirSync(pagesSettingsDest, { recursive: true });
       fs.copyFileSync(path.join(rootDir, 'templates', 'frontend', 'Pages', 'Settings', 'Edit.vue.stub'), path.join(pagesSettingsDest, 'Edit.vue'));
 
+      console.log('部署操作紀錄功能 (Controllers, Pages)...');
+      fs.copyFileSync(path.join(rootDir, 'templates', 'backend', 'ActivityLogController.php.stub'), path.join(projectPath, 'app', 'Http', 'Controllers', 'ActivityLogController.php'));
+      const pagesActivityLogsDest = path.join(projectPath, 'resources', 'js', 'Pages', 'ActivityLogs');
+      if (!fs.existsSync(pagesActivityLogsDest)) fs.mkdirSync(pagesActivityLogsDest, { recursive: true });
+      fs.copyFileSync(path.join(rootDir, 'templates', 'frontend', 'Pages', 'ActivityLogs', 'Index.vue.stub'), path.join(pagesActivityLogsDest, 'Index.vue'));
+
       if (fs.existsSync(routesPath)) {
         let routesContent = fs.readFileSync(routesPath, 'utf8');
         if (!routesContent.includes('SettingController::class')) {
-          routesContent = routesContent.replace(/use App\\Http\\Controllers\\UserController;/, "use App\\Http\\Controllers\\UserController;\nuse App\\Http\\Controllers\\SettingController;");
-          routesContent = routesContent.replace(/Route::resource\('users', UserController::class\);/, "Route::resource('users', UserController::class);\n    Route::get('settings', [SettingController::class, 'edit'])->name('settings.edit');\n    Route::put('settings', [SettingController::class, 'update'])->name('settings.update');");
+          routesContent = routesContent.replace(/use App\\Http\\Controllers\\UserController;/, "use App\\Http\\Controllers\\UserController;\nuse App\\Http\\Controllers\\SettingController;\nuse App\\Http\\Controllers\\ActivityLogController;");
+          routesContent = routesContent.replace(/Route::resource\('users', UserController::class\);/, "Route::resource('users', UserController::class);\n    Route::get('settings', [SettingController::class, 'edit'])->name('settings.edit');\n    Route::put('settings', [SettingController::class, 'update'])->name('settings.update');\n    Route::get('activity-logs', [ActivityLogController::class, 'index'])->name('activity-logs.index');");
           fs.writeFileSync(routesPath, routesContent);
         }
       }
@@ -355,12 +365,12 @@ async function run() {
           // Add Desktop Navigation Link
           layoutContent = layoutContent.replace(
             /帳號管理\s*<\/NavLink>/,
-            `帳號管理\n                                </NavLink>\n                                <NavLink :href="route('settings.edit')" :active="route().current('settings.*')">\n                                    網站設置\n                                </NavLink>`
+            `帳號管理\n                                </NavLink>\n                                <NavLink :href="route('settings.edit')" :active="route().current('settings.*')">\n                                    網站設置\n                                </NavLink>\n                                <NavLink :href="route('activity-logs.index')" :active="route().current('activity-logs.*')">\n                                    操作紀錄\n                                </NavLink>`
           );
           // Add Responsive Navigation Link
           layoutContent = layoutContent.replace(
             /帳號管理\s*<\/ResponsiveNavLink>/,
-            `帳號管理\n                        </ResponsiveNavLink>\n                        <ResponsiveNavLink :href="route('settings.edit')" :active="route().current('settings.*')">\n                            網站設置\n                        </ResponsiveNavLink>`
+            `帳號管理\n                        </ResponsiveNavLink>\n                        <ResponsiveNavLink :href="route('settings.edit')" :active="route().current('settings.*')">\n                            網站設置\n                        </ResponsiveNavLink>\n                        <ResponsiveNavLink :href="route('activity-logs.index')" :active="route().current('activity-logs.*')">\n                            操作紀錄\n                        </ResponsiveNavLink>`
           );
           fs.writeFileSync(layoutPath, layoutContent);
         }
