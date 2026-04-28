@@ -1,0 +1,98 @@
+<script setup>
+import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
+import { Head, useForm } from '@inertiajs/vue3';
+import InputError from '@/Components/InputError.vue';
+import InputLabel from '@/Components/InputLabel.vue';
+import PrimaryButton from '@/Components/PrimaryButton.vue';
+import TextInput from '@/Components/TextInput.vue';
+import { ref } from 'vue';
+
+const props = defineProps({
+    setting: Object,
+});
+
+const form = useForm({
+    site_name: props.setting.site_name || '',
+    contact_email: props.setting.contact_email || '',
+    site_logo: null,
+});
+
+const logoPreview = ref(props.setting.site_logo ? '/storage/' + props.setting.site_logo : null);
+
+const handleLogoChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+        form.site_logo = file;
+        logoPreview.value = URL.createObjectURL(file);
+    }
+};
+
+const submit = () => {
+    // Inertia requires POST for file uploads, but standard Laravel uses PUT for updates. 
+    // We can use post with _method: 'put' to make file upload work.
+    form.post(route('settings.update', { _method: 'put' }), {
+        preserveScroll: true,
+        onSuccess: () => {
+            // success
+        },
+    });
+};
+</script>
+
+<template>
+    <Head title="網站設置" />
+
+    <AuthenticatedLayout>
+        <template #header>
+            <h2 class="font-semibold text-xl text-gray-800 dark:text-gray-200 leading-tight">網站設置</h2>
+        </template>
+
+        <div class="py-12">
+            <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
+                <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-sm sm:rounded-lg">
+                    <div class="p-6 text-gray-900 dark:text-gray-100">
+                        <form @submit.prevent="submit" class="max-w-xl" enctype="multipart/form-data">
+                            
+                            <!-- Site Name -->
+                            <div>
+                                <InputLabel for="site_name" value="網站名稱" />
+                                <TextInput id="site_name" type="text" class="mt-1 block w-full" v-model="form.site_name" required autofocus />
+                                <InputError class="mt-2" :message="form.errors.site_name" />
+                            </div>
+
+                            <!-- Contact Email -->
+                            <div class="mt-4">
+                                <InputLabel for="contact_email" value="聯絡信箱" />
+                                <TextInput id="contact_email" type="email" class="mt-1 block w-full" v-model="form.contact_email" />
+                                <InputError class="mt-2" :message="form.errors.contact_email" />
+                            </div>
+
+                            <!-- Site Logo -->
+                            <div class="mt-4">
+                                <InputLabel for="site_logo" value="網站 Logo" />
+                                
+                                <div class="mt-2 flex items-center gap-4">
+                                    <div v-if="logoPreview" class="w-16 h-16 rounded overflow-hidden border border-gray-300 dark:border-gray-700 bg-gray-50 flex items-center justify-center">
+                                        <img :src="logoPreview" alt="Logo Preview" class="max-w-full max-h-full object-contain" />
+                                    </div>
+                                    <div v-else class="w-16 h-16 rounded border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 flex items-center justify-center text-gray-400 text-xs">
+                                        無圖片
+                                    </div>
+                                    
+                                    <input type="file" id="site_logo" @change="handleLogoChange" class="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 dark:text-gray-400 focus:outline-none dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400" accept="image/*">
+                                </div>
+                                <InputError class="mt-2" :message="form.errors.site_logo" />
+                            </div>
+
+                            <div class="flex items-center justify-end mt-6">
+                                <PrimaryButton :class="{ 'opacity-25': form.processing }" :disabled="form.processing">
+                                    儲存設定
+                                </PrimaryButton>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </AuthenticatedLayout>
+</template>

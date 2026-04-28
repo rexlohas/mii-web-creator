@@ -330,6 +330,65 @@ async function run() {
           fs.writeFileSync(layoutPath, layoutContent);
         }
       }
+
+      console.log('部署網站設置功能 (Models, Controllers, Pages, Routes)...');
+      fs.copyFileSync(path.join(rootDir, 'templates', 'backend', 'SiteSetting.php.stub'), path.join(projectPath, 'app', 'Models', 'SiteSetting.php'));
+      fs.copyFileSync(path.join(rootDir, 'templates', 'backend', 'SettingController.php.stub'), path.join(projectPath, 'app', 'Http', 'Controllers', 'SettingController.php'));
+      fs.copyFileSync(path.join(rootDir, 'templates', 'backend', 'Migrations', '2024_01_01_000000_create_site_settings_table.php.stub'), path.join(projectPath, 'database', 'migrations', '2024_01_01_000000_create_site_settings_table.php'));
+
+      const pagesSettingsDest = path.join(projectPath, 'resources', 'js', 'Pages', 'Settings');
+      if (!fs.existsSync(pagesSettingsDest)) fs.mkdirSync(pagesSettingsDest, { recursive: true });
+      fs.copyFileSync(path.join(rootDir, 'templates', 'frontend', 'Pages', 'Settings', 'Edit.vue.stub'), path.join(pagesSettingsDest, 'Edit.vue'));
+
+      if (fs.existsSync(routesPath)) {
+        let routesContent = fs.readFileSync(routesPath, 'utf8');
+        if (!routesContent.includes('SettingController::class')) {
+          routesContent = routesContent.replace(/use App\\Http\\Controllers\\UserController;/, "use App\\Http\\Controllers\\UserController;\nuse App\\Http\\Controllers\\SettingController;");
+          routesContent = routesContent.replace(/Route::resource\('users', UserController::class\);/, "Route::resource('users', UserController::class);\n    Route::get('settings', [SettingController::class, 'edit'])->name('settings.edit');\n    Route::put('settings', [SettingController::class, 'update'])->name('settings.update');");
+          fs.writeFileSync(routesPath, routesContent);
+        }
+      }
+
+      if (fs.existsSync(layoutPath)) {
+        let layoutContent = fs.readFileSync(layoutPath, 'utf8');
+        if (!layoutContent.includes("route('settings.edit')")) {
+          // Add Desktop Navigation Link
+          layoutContent = layoutContent.replace(
+            /帳號管理\s*<\/NavLink>/,
+            `帳號管理\n                                </NavLink>\n                                <NavLink :href="route('settings.edit')" :active="route().current('settings.*')">\n                                    網站設置\n                                </NavLink>`
+          );
+          // Add Responsive Navigation Link
+          layoutContent = layoutContent.replace(
+            /帳號管理\s*<\/ResponsiveNavLink>/,
+            `帳號管理\n                        </ResponsiveNavLink>\n                        <ResponsiveNavLink :href="route('settings.edit')" :active="route().current('settings.*')">\n                            網站設置\n                        </ResponsiveNavLink>`
+          );
+          fs.writeFileSync(layoutPath, layoutContent);
+        }
+      }
+
+      const middlewarePath = path.join(projectPath, 'app', 'Http', 'Middleware', 'HandleInertiaRequests.php');
+      if (fs.existsSync(middlewarePath)) {
+        let mwContent = fs.readFileSync(middlewarePath, 'utf8');
+        if (!mwContent.includes('SiteSetting::first()')) {
+          mwContent = mwContent.replace(/use Inertia\\Middleware;/, "use Inertia\\Middleware;\nuse App\\Models\\SiteSetting;");
+          mwContent = mwContent.replace(
+            /'auth' => \[/,
+            `'site_setting' => SiteSetting::first() ?? ['site_name' => 'My Application', 'site_logo' => null],\n            'auth' => [`
+          );
+          fs.writeFileSync(middlewarePath, mwContent);
+        }
+      }
+
+      const logoPath = path.join(projectPath, 'resources', 'js', 'Components', 'ApplicationLogo.vue');
+      if (fs.existsSync(logoPath)) {
+        const logoContent = `<template>
+    <img v-if="$page.props.site_setting?.site_logo" :src="'/storage/' + $page.props.site_setting.site_logo" alt="Logo" class="max-h-full" />
+    <svg v-else viewBox="0 0 316 316" xmlns="http://www.w3.org/2000/svg" v-bind="$attrs">
+        <path d="M305.8 81.125C305.77 80.995 305.69 80.885 305.59 80.795C305.52 80.735 305.42 80.705 305.34 80.655C305.22 80.575 305.08 80.535 304.94 80.485C304.83 80.445 304.73 80.405 304.62 80.375C304.49 80.335 304.35 80.315 304.22 80.295C304.13 80.275 304.05 80.275 303.96 80.265C303.8 80.245 303.65 80.245 303.5 80.245C303.38 80.245 303.26 80.245 303.14 80.255C302.97 80.265 302.81 80.285 302.65 80.315C302.53 80.335 302.41 80.355 302.3 80.395C302.14 80.445 301.99 80.505 301.84 80.575C301.74 80.625 301.65 80.675 301.56 80.735C301.44 80.815 301.32 80.905 301.21 80.995C301.12 81.075 301.05 81.165 300.98 81.255C300.86 81.405 300.75 81.565 300.66 81.725C300.58 81.855 300.52 81.995 300.47 82.135C300.4 82.325 300.35 82.515 300.33 82.715C300.31 82.845 300.31 82.975 300.31 83.105V232.885C300.31 233.015 300.31 233.145 300.33 233.275C300.35 233.475 300.4 233.665 300.47 233.855C300.52 233.995 300.58 234.135 300.66 234.265C300.75 234.425 300.86 234.585 300.98 234.735C301.05 234.825 301.12 234.915 301.21 234.995C301.32 235.085 301.44 235.175 301.56 235.255C301.65 235.315 301.74 235.365 301.84 235.415C301.99 235.485 302.14 235.545 302.3 235.595C302.41 235.635 302.53 235.655 302.65 235.675C302.81 235.705 302.97 235.725 303.14 235.735C303.26 235.745 303.38 235.745 303.5 235.745C303.65 235.745 303.8 235.745 303.96 235.725C304.05 235.715 304.13 235.715 304.22 235.695C304.35 235.675 304.49 235.655 304.62 235.615C304.73 235.585 304.83 235.545 304.94 235.505C305.08 235.455 305.22 235.415 305.34 235.335C305.42 235.285 305.52 235.255 305.59 235.195C305.69 235.105 305.77 234.995 305.8 234.865C305.9 234.695 305.98 234.505 306.02 234.315C306.07 234.155 306.1 233.985 306.12 233.815C306.14 233.635 306.15 233.465 306.15 233.285V82.715C306.15 82.535 306.14 82.355 306.12 82.175C306.1 82.005 306.07 81.835 306.02 81.675C305.98 81.485 305.9 81.305 305.8 81.125ZM144.2 227.205L100.57 156.965L105.39 148.865L151.71 227.205H144.2ZM138.83 227.205L92.29 148.695L97.51 139.695L146.46 227.205H138.83ZM89.17 144.925L42.27 227.205H33.91L83.82 138.745L89.17 144.925ZM104.91 131.745L150.53 50.145H158.46L109.83 139.735L104.91 131.745ZM112.51 144.525L160.03 60.105H168.04L117.93 153.685L112.51 144.525ZM121.2 159.205L169.69 73.055H177.72L126.71 168.495L121.2 159.205ZM130.34 174.595L179.62 87.275H187.65L135.95 184.055L130.34 174.595ZM139.56 190.175L189.47 101.695H197.5L145.28 199.815L139.56 190.175ZM149.2 206.405L199.78 116.535H207.81L155.05 216.275L149.2 206.405ZM158.55 222.185L209.68 131.395H217.71L164.5 232.205H158.55Z" fill="#FF2D20"/>
+    </svg>
+</template>`;
+        fs.writeFileSync(logoPath, logoContent);
+      }
     }
 
     if (startStep <= 6) {
@@ -340,7 +399,9 @@ async function run() {
       execSync(`docker compose exec ${projectName}-app ${waitDbCmd}`, { cwd: projectPath, stdio: 'inherit' });
       execSync(`docker compose exec ${projectName}-app php artisan migrate`, { cwd: projectPath, stdio: 'inherit' });
 
-      console.log('正在建立預設管理員帳號...');
+      console.log('正在建立預設管理員帳號與初始設定...');
+      execSync(`docker compose exec ${projectName}-app php artisan storage:link`, { cwd: projectPath, stdio: 'inherit' });
+
       let createAdminPhp = fs.readFileSync(path.join(rootDir, 'templates', 'backend', 'create_admin.php.stub'), 'utf8');
       createAdminPhp = createAdminPhp
         .replace(/\{\{adminEmail\}\}/g, adminEmail)
@@ -363,7 +424,7 @@ async function run() {
 
     console.log('\n\x1b[32m%s\x1b[0m', '🎉 全新系統建置完成！');
     console.log(`\n請切換至專案資料夾開始開發：`);
-    console.log(`\x1b[36mcd ${projectName}\x1b[0m`);
+    console.log(`\x1b[36mcd ${projectName} \x1b[0m`);
     console.log(`\n預覽網站：http://localhost:${appPort}`);
     console.log(`資料庫管理 (phpMyAdmin)：http://localhost:${pmaPort}`);
 

@@ -1,0 +1,48 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\SiteSetting;
+use Illuminate\Http\Request;
+use Inertia\Inertia;
+use Illuminate\Support\Facades\Storage;
+
+class SettingController extends Controller
+{
+    public function edit()
+    {
+        $setting = SiteSetting::firstOrCreate(['id' => 1], ['site_name' => 'My Application']);
+        
+        return Inertia::render('Settings/Edit', [
+            'setting' => $setting
+        ]);
+    }
+
+    public function update(Request $request)
+    {
+        $setting = SiteSetting::firstOrCreate(['id' => 1]);
+
+        $validated = $request->validate([
+            'site_name' => 'required|string|max:255',
+            'contact_email' => 'nullable|email|max:255',
+            'site_logo' => 'nullable|image|max:2048', // max 2MB
+        ]);
+
+        $setting->site_name = $validated['site_name'];
+        $setting->contact_email = $validated['contact_email'];
+
+        if ($request->hasFile('site_logo')) {
+            // Delete old logo if exists
+            if ($setting->site_logo && Storage::disk('public')->exists($setting->site_logo)) {
+                Storage::disk('public')->delete($setting->site_logo);
+            }
+            
+            $path = $request->file('site_logo')->store('logos', 'public');
+            $setting->site_logo = $path;
+        }
+
+        $setting->save();
+
+        return redirect()->back()->with('success', 'Site settings updated successfully.');
+    }
+}
