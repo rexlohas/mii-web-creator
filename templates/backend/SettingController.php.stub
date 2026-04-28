@@ -21,6 +21,7 @@ class SettingController extends Controller
     public function update(Request $request)
     {
         $setting = SiteSetting::firstOrCreate(['id' => 1]);
+        $original = $setting->getOriginal();
 
         $validated = $request->validate([
             'site_name' => 'required|string|max:255',
@@ -42,6 +43,23 @@ class SettingController extends Controller
         }
 
         $setting->save();
+
+        activity()
+            ->performedOn($setting)
+            ->causedBy(auth()->user())
+            ->withProperties([
+                'old' => [
+                    'site_name' => $original['site_name'] ?? null,
+                    'contact_email' => $original['contact_email'] ?? null,
+                    'site_logo' => $original['site_logo'] ?? null,
+                ],
+                'attributes' => [
+                    'site_name' => $setting->site_name,
+                    'contact_email' => $setting->contact_email,
+                    'site_logo' => $setting->site_logo,
+                ]
+            ])
+            ->log('updated');
 
         return redirect()->back()->with('success', 'Site settings updated successfully.');
     }
